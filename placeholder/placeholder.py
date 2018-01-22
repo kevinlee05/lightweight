@@ -2,6 +2,9 @@ import hashlib
 import os
 import sys
 
+from io import BytesIO
+from PIL import Image, ImageDraw
+
 from django.conf import settings
 
 DEBUG = os.environ.get('DEBUG', 'on') == 'on'
@@ -9,6 +12,8 @@ DEBUG = os.environ.get('DEBUG', 'on') == 'on'
 SECRET_KEY = os.environ.get('SECRET_KEY', 'e%fskuj7beuhs=^3g6y(2o#jkr=*wvaz1yix$s_aqs0p#+7_gm')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')
+
+BASE_DIR = os.path.dirname(__file__)
 
 settings.configure(
     DEBUG=DEBUG,
@@ -20,15 +25,25 @@ settings.configure(
         'django.middleware.csrf.CsrfViewMiddleware',
         'django.middleware.clickjacking.XFrameOptionsMiddleware',
     ),
+    INSTALLED_APPS=(
+        'django.contrib.staticfiles',
+    ),
+    TEMPLATE_DIRS=(
+        os.path.join(BASE_DIR, 'templates'),
+    ),
+    STATICFILES_DIRS=(
+        os.path.join(BASE_DIR, 'static'),
+    ),
+    STATIC_URL='/static/',
 )
 
-from io import BytesIO
-from PIL import Image, ImageDraw
 from django import forms
 from django.conf.urls import url
 from django.core.cache import cache
+from django.core.urlresolvers import reverse
 from django.core.wsgi import get_wsgi_application
 from django.http import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import render
 from django.views.decorators.http import etag
 
 
@@ -73,7 +88,11 @@ def placeholder(request, width, height):
         return HttpResponseBadRequest('Invalid Image Request')
 
 def index(request):
-    return HttpResponse('Hello World')
+    example = reverse('placeholder', kwargs={'width': 50, 'height': 50})
+    context = {
+        'example' : request.build_absolute_uri(example)
+    }
+    return render(request, 'home.html', context)
 
 urlpatterns = (
     url(r'^image/(?P<width>[0-9]+)x(?P<height>[0-9]+)/$', placeholder, name='placeholder'),
