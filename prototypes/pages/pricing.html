@@ -48,7 +48,7 @@
                 <ul class="list-group list-group-flush text-center">
                     {% for feature in features %}
                     <li class="list-group-item {% if forloop.counter not in plan.features %}
-                        disabled {% endif %}">{{ feature }}</li>
+                        disabled{% endif %}">{{ feature }}</li>
                     {% endfor %}
                     </ul>
                 <div class="panel-footer">
