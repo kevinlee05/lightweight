@@ -1,7 +1,10 @@
-from rest_framework import serializers
-from rest_framework.reverse import reverse # returns full URI unlike django's reverse
+from datetime import date
 
 from django.contrib.auth import get_user_model
+from django.utils.translation import ugettext_lazy as _
+
+from rest_framework import serializers
+from rest_framework.reverse import reverse # returns full URI unlike django's reverse
 
 from .models import Sprint, Task
 
@@ -13,13 +16,23 @@ class SprintSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sprint
-        fields = ('id', 'name', 'description', 'end', 'links', )
+        fields = ('id', 'name', 'description', 'end', 'links',)
 
     def get_links(self ,obj):
         request = self.context['request']
         return {
-            'self': reverse('sprint-detail', kwargs={'pk': obj.pk})
+            'self': reverse('sprint-detail', kwargs={'pk': obj.pk}, request=request),
+            'tasks': reverse('task-list', request=request) + '?sprint={}'.format(obj.pk),
         }
+
+    def validate_end(self, attrs, source):
+        end_date = attrs[source]
+        new = not self.object
+        changed = self.object and self.object.end != end_date
+        if (new or changed) and (end_date < date.today()):
+            msg = _('End date cannot be in the past.')
+            raise serializers.ValidationError(msg)
+        return attrs
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -31,7 +44,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ('id', 'name', 'description', 'sprint', 'status', 'status_display', 'order', 'assigned', 'started', 'due', 'completed')
+        fields = ('id', 'name', 'description', 'sprint', 'status', 'status_display', 'order', 'assigned', 'started', 'due', 'completed', 'links', )
 
     def get_status_display(self, obj):
         return obj.get_status_display()
@@ -50,9 +63,44 @@ class TaskSerializer(serializers.ModelSerializer):
                 kwargs={User.USERNAME_FIELD: obj.assigned}, request=request)
         return links
 
+    def validate_sprint(self, attrs, source): #sprint validator
+        sprint = attrs[source]
+        if self.object and self.object.pk:
+            if sprint != self.object.sprint:
+                if self.object.status == Task.STATUS_DONE:
+                    msg = _('Cannot change the sprint of a completed task')
+                    raise serializers.ValidationError(msg)
+                if sprint and sprint.end < date.today():
+                    msg =('Cannot assign tasks to past sprints')
+                    raise serializers.ValidationError(msg)
+        else:
+            if sprint and sprint.end < date.today():
+                msg = _('Cannot add tasks to past sprints.')
+                raise serializers.ValidationError(msg)
+        return attrs
+
+    def validate(self, attrs): #validate the entire object
+        sprint = attrs.get('sprint')
+        status = int(attrs.get('status'))
+        started = attrs.get('started')
+        completed = attrs.get('completed')
+        if not sprint and status != Task.STATUS_TODO:
+            msg = _('Backlong tasks must have "Not Started" status.')
+            raise serializers.ValidationError(msg)
+        if started and status != Task.STATUS_TODO:
+            msg = _('Started date cannot be set for not started tasks.')
+            raise serializers.ValidationError(msg)
+        if completed and status != Task.STATUS_DONE:
+            msg = _('Completed date cannot be set for uncompleted tasks.')
+            raise serializers.ValidationError(msg)
+        return attrs
+
+
+
+
 class UserSerializer(serializers.ModelSerializer):
     full_name =  serializers.CharField(source='get_full_name', read_only=True)
-    link = serializers.SerializerMethodField('get_links')
+    links = serializers.SerializerMethodField('get_links')
 
     class Meta:
         model = User
@@ -63,6 +111,7 @@ class UserSerializer(serializers.ModelSerializer):
         username = obj.get_username()
         return {
             'self': reverse('user-detail',
-                kwargs = {User.USERNAME_FIELD: username}, request=request)
+                kwargs = {User.USERNAME_FIELD: username}, request=request),
+            'tasks': '{}?assigned={}'.format(reverse('task-list', request=request), username)
         }
 
