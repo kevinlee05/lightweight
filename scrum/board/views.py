@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from rest_framework import authentication, premissionsm, viewsets
+from rest_framework import authentication, permissions, viewsets
 from django.shortcuts import render
 
 from .models import Sprint, Task
