@@ -24,5 +24,4 @@
 
     app.router = AppRouter;
 
-
 })(jQuery, Backbone, _, app);
