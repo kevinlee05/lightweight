@@ -1,6 +1,5 @@
 (function ($, Backbone, _, app){
 
-
     var TemplateView = Backbone.View.extend({
         templateName: '',
         initialize: function(){
@@ -21,7 +20,7 @@
             'submit form': 'submit'
         },
         errorTemplate: _.template('<span class="error"><%- msg %></span>'),
-        cleanErrors: function(){
+        clearErrors: function(){
             $('.error', this.form).remove();
         },
         showErrors: function(errors){
@@ -59,11 +58,11 @@
             this.trigger('done');
             this.remove();
         }
-    })
+    });
 
     var HomepageView = TemplateView.extend({
         templateName: '#home-template'
-    })
+    });
 
     var LoginView = FormView.extend({
         id:'login',
@@ -80,7 +79,7 @@
             app.session.save(data.token);
             this.done();
         }
-    })
+    });
 
     // old version of LoginView before inheritance of FormView
     var LoginViewOld = TemplateView.extend({
@@ -127,9 +126,26 @@
         clearErrors: function(){
             $('.error', this.form).remove();
         }
+    });
+
+    var HeaderView = TemplateView.extend({
+        tagName: 'header',
+        templateName: '#header-template',
+        events: {
+            'click a.logout': 'logout'
+        },
+        getContext: function(){
+            return {authenticated: app.session.authenticated()};
+        },
+        logout: function(event){
+            event.preventDefault();
+            app.session.delete();
+            window.location='/';
+        }
     })
 
     app.views.HomepageView = HomepageView;
     app.views.LoginView = LoginView;
+    app.views.HeaderView = HeaderView;
 
 })(jQuery, Backbone, _, app);

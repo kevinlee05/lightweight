@@ -66,7 +66,7 @@
         authenticated: function(){
             return this.get('token') !== null;
         },
-        _setupAuth: function (settings. originalOptions, xhr) {
+        _setupAuth: function (settings, originalOptions, xhr) {
             if (this.authenticated()){
                 xhr.setRequestHeader(
                     'Authorization',
