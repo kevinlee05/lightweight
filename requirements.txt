@@ -11,4 +11,4 @@ psycopg2==2.7.3.2
 rcssmin==1.0.6
 requests==2.18.4
 rjsmin==1.0.12
-urllib3==1.22
+urllib3==1.26.5
